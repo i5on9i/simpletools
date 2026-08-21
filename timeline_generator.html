@@ -35,6 +35,10 @@
     padding: 7px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;
     flex: 1; font-family: inherit;
   }
+  .event-row input[type="color"] {
+    width: 34px; height: 32px; padding: 2px; border: 1px solid #ccc;
+    border-radius: 4px; cursor: pointer;
+  }
   .remove-btn {
     background: none; border: none; color: #b33; font-size: 15px; cursor: pointer;
     padding: 4px 8px; border-radius: 4px; line-height: 1;
@@ -154,9 +158,11 @@
 
 <script>
 let rowId = 0;
+const COLOR_PALETTE = ['#0f6e56', '#185fa5', '#993c1d', '#993556', '#854f0b', '#533dab'];
 
-function addRow(date = '', label = '') {
+function addRow(date = '', label = '', color = '') {
   const id = 'row' + (rowId++);
+  const defaultColor = color || COLOR_PALETTE[rowId % COLOR_PALETTE.length];
   const rows = document.getElementById('eventRows');
   const row = document.createElement('div');
   row.className = 'event-row';
@@ -164,6 +170,7 @@ function addRow(date = '', label = '') {
   row.innerHTML = `
     <input type="date" value="${date}">
     <input type="text" placeholder="내용" value="${escapeAttr(label)}">
+    <input type="color" value="${defaultColor}" title="이벤트 색상">
     <button class="remove-btn" onclick="removeRow('${id}')">✕</button>
   `;
   rows.appendChild(row);
@@ -187,7 +194,8 @@ function getEvents() {
   rows.forEach(row => {
     const date = row.querySelector('input[type="date"]').value;
     const label = row.querySelector('input[type="text"]').value.trim();
-    if (date && label) events.push({ d: date, l: label });
+    const color = row.querySelector('input[type="color"]').value;
+    if (date && label) events.push({ d: date, l: label, c: color });
   });
   return events;
 }
@@ -246,21 +254,26 @@ function generateTimeline() {
     const side = i % 2 === 0 ? 'left' : 'right';
     const top = positions[i];
 
+    const color = ev.c || '#0f6e56';
+
     const dot = document.createElement('div');
     dot.className = 'event-dot';
     dot.style.top = top + 'px';
+    dot.style.background = color;
+    dot.style.boxShadow = `0 0 0 1px ${color}`;
     inner.appendChild(dot);
 
     const label = document.createElement('div');
     label.className = 'event-label ' + side;
     label.style.top = top + 'px';
-    label.innerHTML = `<div class="date">${escapeHtml(ev.d)}</div><div class="content">${escapeHtml(ev.l)}</div>`;
+    label.style.borderColor = color;
+    label.innerHTML = `<div class="date" style="color:${color}">${escapeHtml(ev.d)}</div><div class="content">${escapeHtml(ev.l)}</div>`;
     inner.appendChild(label);
   });
 
   applyRotation();
   document.getElementById('timelineSection').style.display = 'block';
-  renderMinimap(positions, height);
+  renderMinimap(events, positions, height);
 }
 
 function applyRotation() {
@@ -270,7 +283,7 @@ function applyRotation() {
 }
 
 /* ---- Minimap ---- */
-function renderMinimap(positions, contentHeight) {
+function renderMinimap(events, positions, contentHeight) {
   const minimap = document.getElementById('minimap');
   const scrollBox = document.getElementById('timelineScroll');
   minimap.innerHTML = '';
@@ -285,10 +298,11 @@ function renderMinimap(positions, contentHeight) {
 
   const mapH = minimap.clientHeight;
 
-  positions.forEach(pos => {
+  positions.forEach((pos, i) => {
     const dot = document.createElement('div');
     dot.className = 'mini-dot';
     dot.style.top = ((pos / contentHeight) * mapH) + 'px';
+    dot.style.background = (events[i] && events[i].c) || '#0f6e56';
     dot.onclick = () => {
       const targetTop = (pos / contentHeight) * scrollBox.scrollHeight - scrollBox.clientHeight / 2;
       scrollBox.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
@@ -341,7 +355,7 @@ function loadFromUrl() {
     const events = JSON.parse(raw);
     if (!Array.isArray(events) || events.length === 0) return false;
     document.getElementById('eventRows').innerHTML = '';
-    events.forEach(ev => addRow(ev.d || '', ev.l || ''));
+    events.forEach(ev => addRow(ev.d || '', ev.l || '', ev.c || ''));
     return true;
   } catch (e) {
     return false;
