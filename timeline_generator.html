@@ -123,6 +123,7 @@
     border-radius: 3px; pointer-events: none;
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -337,7 +338,8 @@ function copyLink() {
   }
   const url = new URL(window.location.href);
   url.search = '';
-  url.searchParams.set('events', JSON.stringify(events));
+  const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(events));
+  url.searchParams.set('ez', compressed);
   navigator.clipboard.writeText(url.toString()).then(() => {
     const msg = document.getElementById('copiedMsg');
     msg.style.display = 'inline';
@@ -349,8 +351,16 @@ function copyLink() {
 
 function loadFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  const raw = params.get('events');
+  let raw = null;
+
+  const compressed = params.get('ez');
+  if (compressed) {
+    raw = LZString.decompressFromEncodedURIComponent(compressed);
+  } else {
+    raw = params.get('events'); // 이전 버전(비압축) 링크 호환
+  }
   if (!raw) return false;
+
   try {
     const events = JSON.parse(raw);
     if (!Array.isArray(events) || events.length === 0) return false;
