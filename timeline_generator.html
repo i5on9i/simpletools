@@ -5,295 +5,358 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>타임라인 생성기</title>
 <style>
-  :root{
-    --bg:#0f1115;
-    --panel:#161a22;
-    --panel-border:#262b36;
-    --text:#e8eaed;
-    --text-dim:#8b90a0;
-    --accent:#5b8cff;
-    --accent-dim:#2a3550;
-    --line:#3a4050;
-    --danger:#ff6b6b;
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f6f6f4;
+    color: #222;
+    line-height: 1.5;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:var(--bg);
-    color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Pretendard,Roboto,sans-serif;
-    padding:32px 20px;
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: #777; margin-bottom: 20px; }
+  .card {
+    background: #fff;
+    border: 1px solid #e0e0dc;
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
   }
-  .wrap{max-width:1100px;margin:0 auto;}
-  h1{font-size:20px;font-weight:600;margin:0 0 4px;}
-  .sub{color:var(--text-dim);font-size:13px;margin:0 0 24px;}
+  .card h2 { font-size: 14px; font-weight: 600; margin: 0 0 12px; color: #444; }
 
-  .panel{
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    border-radius:10px;
-    padding:18px;
-    margin-bottom:20px;
+  .event-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .event-row input[type="date"] {
+    padding: 7px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;
+    width: 150px; font-family: inherit;
   }
+  .event-row input[type="text"] {
+    padding: 7px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;
+    flex: 1; font-family: inherit;
+  }
+  .remove-btn {
+    background: none; border: none; color: #b33; font-size: 15px; cursor: pointer;
+    padding: 4px 8px; border-radius: 4px; line-height: 1;
+  }
+  .remove-btn:hover { background: #fbe9e9; }
 
-  #eventList{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
-  .event-row{
-    display:grid;
-    grid-template-columns:150px 1fr 36px;
-    gap:8px;
-    align-items:center;
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+  .btn {
+    padding: 8px 14px; border: 1px solid #333; background: #fff; color: #222;
+    border-radius: 5px; font-size: 13px; cursor: pointer; font-family: inherit;
   }
-  .event-row input{
-    background:#0d0f14;
-    border:1px solid var(--panel-border);
-    color:var(--text);
-    border-radius:6px;
-    padding:8px 10px;
-    font-size:13px;
-    width:100%;
-    font-family:inherit;
-  }
-  .event-row input:focus{outline:none;border-color:var(--accent);}
-  .event-row button.remove{
-    background:transparent;
-    border:1px solid var(--panel-border);
-    color:var(--text-dim);
-    border-radius:6px;
-    width:36px;
-    height:36px;
-    cursor:pointer;
-    font-size:16px;
-    line-height:1;
-  }
-  .event-row button.remove:hover{border-color:var(--danger);color:var(--danger);}
+  .btn:hover { background: #f0f0ee; }
+  .btn-primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .btn-primary:hover { background: #333; }
+  .btn-add { border-style: dashed; color: #555; }
 
-  .row-header{
-    display:grid;
-    grid-template-columns:150px 1fr 36px;
-    gap:8px;
-    font-size:11px;
-    color:var(--text-dim);
-    padding:0 2px 4px;
+  .toggle-label {
+    display: flex; align-items: center; gap: 6px; font-size: 13px; color: #444;
+    cursor: pointer; user-select: none; margin-left: auto;
   }
 
-  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
-  button{font-family:inherit;cursor:pointer;}
-  .btn-secondary{
-    background:transparent;
-    border:1px solid var(--panel-border);
-    color:var(--text);
-    border-radius:6px;
-    padding:9px 14px;
-    font-size:13px;
-  }
-  .btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
-  .btn-primary{
-    background:var(--accent);
-    border:1px solid var(--accent);
-    color:#0d0f14;
-    border-radius:6px;
-    padding:9px 18px;
-    font-size:13px;
-    font-weight:600;
-  }
-  .btn-primary:hover{opacity:0.9;}
+  .error { color: #b33; font-size: 13px; margin-top: 10px; display: none; }
+  .copied-msg { color: #0f6e56; font-size: 13px; margin-left: 4px; display: none; }
 
-  #timelineOutput{
-    background:var(--panel);
-    border:1px solid var(--panel-border);
-    border-radius:10px;
-    padding:24px 12px;
-    overflow-x:auto;
-    min-height:180px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+  /* Timeline */
+  #timelineSection { display: none; }
+  #timelineSection h2 { font-size: 14px; font-weight: 600; color: #444; margin-bottom: 12px; }
+  #timelineWrap {
+    display: flex; gap: 10px; align-items: stretch;
   }
-  #timelineOutput .placeholder{color:var(--text-dim);font-size:13px;}
+  #timelineScroll {
+    flex: 1; overflow-y: auto; max-height: 70vh; position: relative;
+    border: 1px solid #e0e0dc; border-radius: 8px; background: #fff;
+    padding: 40px 0;
+  }
+  #timelineInner { position: relative; width: 100%; }
+  .center-line {
+    position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+    background: #ddd; transform: translateX(-50%);
+  }
+  .event-dot {
+    position: absolute; left: 50%; width: 10px; height: 10px;
+    background: #0f6e56; border-radius: 50%; transform: translate(-50%, -50%);
+    border: 2px solid #fff; box-shadow: 0 0 0 1px #0f6e56;
+  }
+  .event-label {
+    position: absolute; width: 220px; transform: translateY(-50%);
+    font-size: 13px; padding: 6px 10px; background: #f2f7f4;
+    border: 1px solid #d9e8e0; border-radius: 6px;
+  }
+  .event-label .date { font-weight: 600; font-size: 12px; color: #0f6e56; margin-bottom: 2px; }
+  .event-label .content { color: #333; word-break: break-word; }
+  .event-label.left { right: calc(50% + 20px); text-align: right; }
+  .event-label.right { left: calc(50% + 20px); text-align: left; }
 
-  .error-msg{color:var(--danger);font-size:12px;margin-top:8px;}
+  /* rotated (vertical writing) mode - compact horizontal footprint,
+     read normally when device is rotated to landscape */
+  #timelineInner.rotated .event-label {
+    width: auto; max-height: 220px; writing-mode: vertical-rl; text-orientation: mixed;
+    text-align: left; padding: 10px 6px;
+  }
+  #timelineInner.rotated .event-label.left { right: calc(50% + 20px); }
+  #timelineInner.rotated .event-label.right { left: calc(50% + 20px); }
+  #timelineInner.rotated .event-label .date { margin-bottom: 0; margin-right: 4px; }
+
+  /* Minimap */
+  #minimap {
+    width: 46px; flex-shrink: 0; position: relative;
+    border: 1px solid #e0e0dc; border-radius: 8px; background: #fafaf8;
+  }
+  .mini-line {
+    position: absolute; left: 50%; top: 6px; bottom: 6px; width: 1px;
+    background: #ddd; transform: translateX(-50%);
+  }
+  .mini-dot {
+    position: absolute; left: 50%; width: 6px; height: 6px; border-radius: 50%;
+    background: #0f6e56; transform: translate(-50%, -50%); cursor: pointer;
+  }
+  .mini-viewport {
+    position: absolute; left: 3px; right: 3px;
+    background: rgba(15, 110, 86, 0.12); border: 1px solid rgba(15, 110, 86, 0.5);
+    border-radius: 3px; pointer-events: none;
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>가로 타임라인 생성기</h1>
-  <p class="sub">이벤트를 원하는 만큼 추가하고 '생성' 버튼을 누르면 가로 타임라인을 만들어줍니다.</p>
+<div class="container">
+  <h1>타임라인 생성기</h1>
+  <div class="subtitle">이벤트를 입력하고 세로형 타임라인을 생성하세요. 링크로 공유할 수 있습니다.</div>
 
-  <div class="panel">
-    <div class="row-header">
-      <span>날짜</span>
-      <span>이벤트 내용</span>
-      <span></span>
+  <div class="card">
+    <h2>이벤트 입력</h2>
+    <div id="eventRows"></div>
+    <div class="toolbar">
+      <button class="btn btn-add" onclick="addRow()">+ 이벤트 추가</button>
+      <button class="btn btn-primary" onclick="generateTimeline()">생성</button>
+      <button class="btn" onclick="copyLink()">🔗 링크 복사</button>
+      <span class="copied-msg" id="copiedMsg">복사됨!</span>
+      <label class="toggle-label">
+        <input type="checkbox" id="rotateToggle" onchange="applyRotation()">
+        라벨 세로쓰기 (기기를 가로로 돌려서 보기)
+      </label>
     </div>
-    <div id="eventList"></div>
-    <div class="btn-row">
-      <button class="btn-secondary" id="addBtn">+ 이벤트 추가</button>
-      <button class="btn-primary" id="generateBtn">생성</button>
-      <button class="btn-secondary" id="shareBtn">🔗 링크 복사</button>
-    </div>
-    <div class="error-msg" id="errorMsg"></div>
-    <div class="error-msg" id="shareMsg" style="color:var(--accent);"></div>
+    <div class="error" id="errorMsg"></div>
   </div>
 
-  <div id="timelineOutput">
-    <span class="placeholder">이벤트를 입력하고 생성 버튼을 누르세요</span>
+  <div class="card" id="timelineSection">
+    <h2>타임라인</h2>
+    <div id="timelineWrap">
+      <div id="timelineScroll">
+        <div id="timelineInner"></div>
+      </div>
+      <div id="minimap"></div>
+    </div>
   </div>
 </div>
 
 <script>
-const eventList = document.getElementById('eventList');
-const errorMsg = document.getElementById('errorMsg');
 let rowId = 0;
 
-function addRow(date, label){
-  rowId++;
+function addRow(date = '', label = '') {
+  const id = 'row' + (rowId++);
+  const rows = document.getElementById('eventRows');
   const row = document.createElement('div');
   row.className = 'event-row';
-  row.dataset.id = rowId;
+  row.id = id;
   row.innerHTML = `
-    <input type="date" class="ev-date" value="${date || ''}">
-    <input type="text" class="ev-label" placeholder="예: 프로젝트 시작" value="${label || ''}">
-    <button class="remove" title="삭제">✕</button>
+    <input type="date" value="${date}">
+    <input type="text" placeholder="내용" value="${escapeAttr(label)}">
+    <button class="remove-btn" onclick="removeRow('${id}')">✕</button>
   `;
-  row.querySelector('.remove').addEventListener('click', () => {
-    row.remove();
-  });
-  eventList.appendChild(row);
+  rows.appendChild(row);
 }
 
-document.getElementById('addBtn').addEventListener('click', () => addRow());
+function removeRow(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
 
-// ---- URL param encode/decode ----
-// events are packed as JSON: [{"d":"2024-01-01","l":"이벤트명"}, ...]
-// into a single query param "events"
+function escapeAttr(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
-function loadFromUrl(){
+function getEvents() {
+  const rows = document.querySelectorAll('.event-row');
+  const events = [];
+  rows.forEach(row => {
+    const date = row.querySelector('input[type="date"]').value;
+    const label = row.querySelector('input[type="text"]').value.trim();
+    if (date && label) events.push({ d: date, l: label });
+  });
+  return events;
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  if (msg) { el.textContent = msg; el.style.display = 'block'; }
+  else { el.style.display = 'none'; }
+}
+
+function computeLayout(events) {
+  const PADDING = 50;
+  const MIN_SPACING = 90;
+  const times = events.map(e => new Date(e.d).getTime());
+  const minT = Math.min(...times);
+  const maxT = Math.max(...times);
+  const totalDays = (maxT - minT) / 86400000;
+
+  let positions;
+  if (totalDays <= 0) {
+    positions = events.map((_, i) => PADDING + i * MIN_SPACING);
+  } else {
+    let minGapDays = Infinity;
+    for (let i = 1; i < times.length; i++) {
+      const diff = (times[i] - times[i - 1]) / 86400000;
+      if (diff > 0) minGapDays = Math.min(minGapDays, diff);
+    }
+    if (!isFinite(minGapDays)) minGapDays = totalDays;
+    const scale = MIN_SPACING / minGapDays;
+    positions = times.map(t => PADDING + ((t - minT) / 86400000) * scale);
+  }
+  const height = positions[positions.length - 1] + PADDING;
+  return { positions, height };
+}
+
+function generateTimeline() {
+  showError('');
+  let events = getEvents();
+  if (events.length < 2) {
+    showError('날짜와 내용을 모두 입력한 이벤트가 최소 2개 필요합니다.');
+    document.getElementById('timelineSection').style.display = 'none';
+    return;
+  }
+  events.sort((a, b) => new Date(a.d) - new Date(b.d));
+
+  const { positions, height } = computeLayout(events);
+  const inner = document.getElementById('timelineInner');
+  inner.innerHTML = '';
+  inner.style.height = height + 'px';
+
+  const centerLine = document.createElement('div');
+  centerLine.className = 'center-line';
+  inner.appendChild(centerLine);
+
+  events.forEach((ev, i) => {
+    const side = i % 2 === 0 ? 'left' : 'right';
+    const top = positions[i];
+
+    const dot = document.createElement('div');
+    dot.className = 'event-dot';
+    dot.style.top = top + 'px';
+    inner.appendChild(dot);
+
+    const label = document.createElement('div');
+    label.className = 'event-label ' + side;
+    label.style.top = top + 'px';
+    label.innerHTML = `<div class="date">${escapeHtml(ev.d)}</div><div class="content">${escapeHtml(ev.l)}</div>`;
+    inner.appendChild(label);
+  });
+
+  applyRotation();
+  document.getElementById('timelineSection').style.display = 'block';
+  renderMinimap(positions, height);
+}
+
+function applyRotation() {
+  const inner = document.getElementById('timelineInner');
+  const on = document.getElementById('rotateToggle').checked;
+  inner.classList.toggle('rotated', on);
+}
+
+/* ---- Minimap ---- */
+function renderMinimap(positions, contentHeight) {
+  const minimap = document.getElementById('minimap');
+  const scrollBox = document.getElementById('timelineScroll');
+  minimap.innerHTML = '';
+
+  const line = document.createElement('div');
+  line.className = 'mini-line';
+  minimap.appendChild(line);
+
+  const viewport = document.createElement('div');
+  viewport.className = 'mini-viewport';
+  minimap.appendChild(viewport);
+
+  const mapH = minimap.clientHeight;
+
+  positions.forEach(pos => {
+    const dot = document.createElement('div');
+    dot.className = 'mini-dot';
+    dot.style.top = ((pos / contentHeight) * mapH) + 'px';
+    dot.onclick = () => {
+      const targetTop = (pos / contentHeight) * scrollBox.scrollHeight - scrollBox.clientHeight / 2;
+      scrollBox.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    };
+    minimap.appendChild(dot);
+  });
+
+  function updateViewport() {
+    const ratioTop = scrollBox.scrollTop / scrollBox.scrollHeight;
+    const ratioH = scrollBox.clientHeight / scrollBox.scrollHeight;
+    viewport.style.top = (ratioTop * mapH) + 'px';
+    viewport.style.height = Math.max(6, ratioH * mapH) + 'px';
+  }
+  scrollBox.onscroll = updateViewport;
+  updateViewport();
+
+  minimap.onclick = (e) => {
+    if (e.target !== minimap && e.target !== line) return;
+    const rect = minimap.getBoundingClientRect();
+    const frac = (e.clientY - rect.top) / rect.height;
+    const targetTop = frac * scrollBox.scrollHeight - scrollBox.clientHeight / 2;
+    scrollBox.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+  };
+}
+
+/* ---- URL sharing ---- */
+function copyLink() {
+  const events = getEvents();
+  if (events.length === 0) {
+    showError('공유할 이벤트를 먼저 입력하세요.');
+    return;
+  }
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.searchParams.set('events', JSON.stringify(events));
+  navigator.clipboard.writeText(url.toString()).then(() => {
+    const msg = document.getElementById('copiedMsg');
+    msg.style.display = 'inline';
+    setTimeout(() => { msg.style.display = 'none'; }, 1800);
+  }).catch(() => {
+    showError('클립보드 복사에 실패했습니다. 브라우저 권한을 확인하세요.');
+  });
+}
+
+function loadFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const raw = params.get('events');
-  if(!raw) return false;
-  try{
-    const arr = JSON.parse(raw);
-    if(!Array.isArray(arr) || arr.length === 0) return false;
-    arr.forEach(e => addRow(e.d || '', e.l || ''));
+  if (!raw) return false;
+  try {
+    const events = JSON.parse(raw);
+    if (!Array.isArray(events) || events.length === 0) return false;
+    document.getElementById('eventRows').innerHTML = '';
+    events.forEach(ev => addRow(ev.d || '', ev.l || ''));
     return true;
-  }catch(err){
-    console.error('이벤트 파라미터 파싱 실패', err);
+  } catch (e) {
     return false;
   }
 }
 
-function buildShareUrl(){
-  const rows = [...eventList.querySelectorAll('.event-row')];
-  const events = [];
-  for(const row of rows){
-    const d = row.querySelector('.ev-date').value;
-    const l = row.querySelector('.ev-label').value.trim();
-    if(d && l) events.push({ d, l });
+/* ---- init ---- */
+window.addEventListener('DOMContentLoaded', () => {
+  const loaded = loadFromUrl();
+  if (!loaded) {
+    for (let i = 0; i < 3; i++) addRow();
+  } else {
+    generateTimeline();
   }
-  if(events.length < 2) return null;
-  const params = new URLSearchParams();
-  params.set('events', JSON.stringify(events));
-  const base = window.location.origin + window.location.pathname;
-  return `${base}?${params.toString()}`;
-}
-
-document.getElementById('shareBtn').addEventListener('click', () => {
-  const shareMsg = document.getElementById('shareMsg');
-  const url = buildShareUrl();
-  if(!url){
-    errorMsg.textContent = '날짜와 내용이 모두 입력된 이벤트가 최소 2개 필요합니다.';
-    shareMsg.textContent = '';
-    return;
-  }
-  errorMsg.textContent = '';
-  navigator.clipboard.writeText(url).then(() => {
-    shareMsg.textContent = '링크가 클립보드에 복사되었습니다.';
-  }).catch(() => {
-    shareMsg.textContent = url;
-  });
 });
-
-// load from URL if present, otherwise start with 3 empty rows
-const loaded = loadFromUrl();
-if(!loaded){
-  addRow(); addRow(); addRow();
-} else {
-  generateTimeline();
-}
-
-function escapeXml(str){
-  return str.replace(/[<>&"']/g, c => ({
-    '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&apos;'
-  }[c]));
-}
-
-function generateTimeline(){
-  errorMsg.textContent = '';
-  const rows = [...eventList.querySelectorAll('.event-row')];
-  let events = [];
-
-  for(const row of rows){
-    const dateVal = row.querySelector('.ev-date').value;
-    const labelVal = row.querySelector('.ev-label').value.trim();
-    if(dateVal && labelVal){
-      events.push({ date: new Date(dateVal + 'T00:00:00'), dateStr: dateVal, label: labelVal });
-    }
-  }
-
-  if(events.length < 2){
-    errorMsg.textContent = '날짜와 내용이 모두 입력된 이벤트가 최소 2개 필요합니다.';
-    return;
-  }
-
-  events.sort((a,b) => a.date - b.date);
-
-  const minDate = events[0].date;
-  const maxDate = events[events.length-1].date;
-  const span = maxDate - minDate || 1;
-
-  // layout
-  const marginX = 80;
-  const width = Math.max(900, 220 * events.length);
-  const usableWidth = width - marginX*2;
-  const height = 220;
-  const lineY = 120;
-
-  const positions = events.map(e => marginX + ((e.date - minDate) / span) * usableWidth);
-
-  // alternate labels above/below to avoid collision
-  let svgParts = [];
-  svgParts.push(`<line x1="${marginX}" y1="${lineY}" x2="${width - marginX}" y2="${lineY}" stroke="#3a4050" stroke-width="2"/>`);
-
-  events.forEach((e, i) => {
-    const x = positions[i];
-    const above = i % 2 === 0;
-    const dotColor = '#5b8cff';
-    const textY = above ? lineY - 34 : lineY + 46;
-    const dateY = above ? lineY - 16 : lineY + 28;
-    const stemY1 = above ? lineY - 8 : lineY + 8;
-    const stemY2 = above ? lineY - 22 : lineY + 22;
-
-    svgParts.push(`<line x1="${x}" y1="${stemY1}" x2="${x}" y2="${stemY2}" stroke="#3a4050" stroke-width="1.5"/>`);
-    svgParts.push(`<circle cx="${x}" cy="${lineY}" r="6" fill="${dotColor}" stroke="#0f1115" stroke-width="2"/>`);
-
-    const label = escapeXml(e.label);
-    const dateLabel = e.dateStr;
-
-    svgParts.push(`
-      <text x="${x}" y="${textY}" text-anchor="middle" fill="#e8eaed" font-size="13" font-weight="600" font-family="-apple-system,Segoe UI,Roboto,sans-serif">${label}</text>
-      <text x="${x}" y="${dateY}" text-anchor="middle" fill="#8b90a0" font-size="11" font-family="-apple-system,Segoe UI,Roboto,sans-serif">${dateLabel}</text>
-    `);
-  });
-
-  const svg = `
-  <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-    ${svgParts.join('\n')}
-  </svg>`;
-
-  document.getElementById('timelineOutput').innerHTML = svg;
-}
-
-document.getElementById('generateBtn').addEventListener('click', generateTimeline);
 </script>
 </body>
 </html>
