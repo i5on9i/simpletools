@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>타임라인 생성기</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#161a22;
+    --panel-border:#262b36;
+    --text:#e8eaed;
+    --text-dim:#8b90a0;
+    --accent:#5b8cff;
+    --accent-dim:#2a3550;
+    --line:#3a4050;
+    --danger:#ff6b6b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Pretendard,Roboto,sans-serif;
+    padding:32px 20px;
+  }
+  .wrap{max-width:1100px;margin:0 auto;}
+  h1{font-size:20px;font-weight:600;margin:0 0 4px;}
+  .sub{color:var(--text-dim);font-size:13px;margin:0 0 24px;}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:18px;
+    margin-bottom:20px;
+  }
+
+  #eventList{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+  .event-row{
+    display:grid;
+    grid-template-columns:150px 1fr 36px;
+    gap:8px;
+    align-items:center;
+  }
+  .event-row input{
+    background:#0d0f14;
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    border-radius:6px;
+    padding:8px 10px;
+    font-size:13px;
+    width:100%;
+    font-family:inherit;
+  }
+  .event-row input:focus{outline:none;border-color:var(--accent);}
+  .event-row button.remove{
+    background:transparent;
+    border:1px solid var(--panel-border);
+    color:var(--text-dim);
+    border-radius:6px;
+    width:36px;
+    height:36px;
+    cursor:pointer;
+    font-size:16px;
+    line-height:1;
+  }
+  .event-row button.remove:hover{border-color:var(--danger);color:var(--danger);}
+
+  .row-header{
+    display:grid;
+    grid-template-columns:150px 1fr 36px;
+    gap:8px;
+    font-size:11px;
+    color:var(--text-dim);
+    padding:0 2px 4px;
+  }
+
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  button{font-family:inherit;cursor:pointer;}
+  .btn-secondary{
+    background:transparent;
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    border-radius:6px;
+    padding:9px 14px;
+    font-size:13px;
+  }
+  .btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-primary{
+    background:var(--accent);
+    border:1px solid var(--accent);
+    color:#0d0f14;
+    border-radius:6px;
+    padding:9px 18px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .btn-primary:hover{opacity:0.9;}
+
+  #timelineOutput{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:24px 12px;
+    overflow-x:auto;
+    min-height:180px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  #timelineOutput .placeholder{color:var(--text-dim);font-size:13px;}
+
+  .error-msg{color:var(--danger);font-size:12px;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>가로 타임라인 생성기</h1>
+  <p class="sub">이벤트를 원하는 만큼 추가하고 '생성' 버튼을 누르면 가로 타임라인을 만들어줍니다.</p>
+
+  <div class="panel">
+    <div class="row-header">
+      <span>날짜</span>
+      <span>이벤트 내용</span>
+      <span></span>
+    </div>
+    <div id="eventList"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="addBtn">+ 이벤트 추가</button>
+      <button class="btn-primary" id="generateBtn">생성</button>
+      <button class="btn-secondary" id="shareBtn">🔗 링크 복사</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="error-msg" id="shareMsg" style="color:var(--accent);"></div>
+  </div>
+
+  <div id="timelineOutput">
+    <span class="placeholder">이벤트를 입력하고 생성 버튼을 누르세요</span>
+  </div>
+</div>
+
+<script>
+const eventList = document.getElementById('eventList');
+const errorMsg = document.getElementById('errorMsg');
+let rowId = 0;
+
+function addRow(date, label){
+  rowId++;
+  const row = document.createElement('div');
+  row.className = 'event-row';
+  row.dataset.id = rowId;
+  row.innerHTML = `
+    <input type="date" class="ev-date" value="${date || ''}">
+    <input type="text" class="ev-label" placeholder="예: 프로젝트 시작" value="${label || ''}">
+    <button class="remove" title="삭제">✕</button>
+  `;
+  row.querySelector('.remove').addEventListener('click', () => {
+    row.remove();
+  });
+  eventList.appendChild(row);
+}
+
+document.getElementById('addBtn').addEventListener('click', () => addRow());
+
+// ---- URL param encode/decode ----
+// events are packed as JSON: [{"d":"2024-01-01","l":"이벤트명"}, ...]
+// into a single query param "events"
+
+function loadFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('events');
+  if(!raw) return false;
+  try{
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr) || arr.length === 0) return false;
+    arr.forEach(e => addRow(e.d || '', e.l || ''));
+    return true;
+  }catch(err){
+    console.error('이벤트 파라미터 파싱 실패', err);
+    return false;
+  }
+}
+
+function buildShareUrl(){
+  const rows = [...eventList.querySelectorAll('.event-row')];
+  const events = [];
+  for(const row of rows){
+    const d = row.querySelector('.ev-date').value;
+    const l = row.querySelector('.ev-label').value.trim();
+    if(d && l) events.push({ d, l });
+  }
+  if(events.length < 2) return null;
+  const params = new URLSearchParams();
+  params.set('events', JSON.stringify(events));
+  const base = window.location.origin + window.location.pathname;
+  return `${base}?${params.toString()}`;
+}
+
+document.getElementById('shareBtn').addEventListener('click', () => {
+  const shareMsg = document.getElementById('shareMsg');
+  const url = buildShareUrl();
+  if(!url){
+    errorMsg.textContent = '날짜와 내용이 모두 입력된 이벤트가 최소 2개 필요합니다.';
+    shareMsg.textContent = '';
+    return;
+  }
+  errorMsg.textContent = '';
+  navigator.clipboard.writeText(url).then(() => {
+    shareMsg.textContent = '링크가 클립보드에 복사되었습니다.';
+  }).catch(() => {
+    shareMsg.textContent = url;
+  });
+});
+
+// load from URL if present, otherwise start with 3 empty rows
+const loaded = loadFromUrl();
+if(!loaded){
+  addRow(); addRow(); addRow();
+} else {
+  generateTimeline();
+}
+
+function escapeXml(str){
+  return str.replace(/[<>&"']/g, c => ({
+    '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&apos;'
+  }[c]));
+}
+
+function generateTimeline(){
+  errorMsg.textContent = '';
+  const rows = [...eventList.querySelectorAll('.event-row')];
+  let events = [];
+
+  for(const row of rows){
+    const dateVal = row.querySelector('.ev-date').value;
+    const labelVal = row.querySelector('.ev-label').value.trim();
+    if(dateVal && labelVal){
+      events.push({ date: new Date(dateVal + 'T00:00:00'), dateStr: dateVal, label: labelVal });
+    }
+  }
+
+  if(events.length < 2){
+    errorMsg.textContent = '날짜와 내용이 모두 입력된 이벤트가 최소 2개 필요합니다.';
+    return;
+  }
+
+  events.sort((a,b) => a.date - b.date);
+
+  const minDate = events[0].date;
+  const maxDate = events[events.length-1].date;
+  const span = maxDate - minDate || 1;
+
+  // layout
+  const marginX = 80;
+  const width = Math.max(900, 220 * events.length);
+  const usableWidth = width - marginX*2;
+  const height = 220;
+  const lineY = 120;
+
+  const positions = events.map(e => marginX + ((e.date - minDate) / span) * usableWidth);
+
+  // alternate labels above/below to avoid collision
+  let svgParts = [];
+  svgParts.push(`<line x1="${marginX}" y1="${lineY}" x2="${width - marginX}" y2="${lineY}" stroke="#3a4050" stroke-width="2"/>`);
+
+  events.forEach((e, i) => {
+    const x = positions[i];
+    const above = i % 2 === 0;
+    const dotColor = '#5b8cff';
+    const textY = above ? lineY - 34 : lineY + 46;
+    const dateY = above ? lineY - 16 : lineY + 28;
+    const stemY1 = above ? lineY - 8 : lineY + 8;
+    const stemY2 = above ? lineY - 22 : lineY + 22;
+
+    svgParts.push(`<line x1="${x}" y1="${stemY1}" x2="${x}" y2="${stemY2}" stroke="#3a4050" stroke-width="1.5"/>`);
+    svgParts.push(`<circle cx="${x}" cy="${lineY}" r="6" fill="${dotColor}" stroke="#0f1115" stroke-width="2"/>`);
+
+    const label = escapeXml(e.label);
+    const dateLabel = e.dateStr;
+
+    svgParts.push(`
+      <text x="${x}" y="${textY}" text-anchor="middle" fill="#e8eaed" font-size="13" font-weight="600" font-family="-apple-system,Segoe UI,Roboto,sans-serif">${label}</text>
+      <text x="${x}" y="${dateY}" text-anchor="middle" fill="#8b90a0" font-size="11" font-family="-apple-system,Segoe UI,Roboto,sans-serif">${dateLabel}</text>
+    `);
+  });
+
+  const svg = `
+  <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    ${svgParts.join('\n')}
+  </svg>`;
+
+  document.getElementById('timelineOutput').innerHTML = svg;
+}
+
+document.getElementById('generateBtn').addEventListener('click', generateTimeline);
+</script>
+</body>
+</html>
