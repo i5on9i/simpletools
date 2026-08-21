@@ -209,25 +209,24 @@ function showError(msg) {
 
 function computeLayout(events) {
   const PADDING = 50;
-  const MIN_SPACING = 90;
-  const times = events.map(e => new Date(e.d).getTime());
-  const minT = Math.min(...times);
-  const maxT = Math.max(...times);
-  const totalDays = (maxT - minT) / 86400000;
+  const MIN_GAP = 70;   // 이벤트 간 최소 간격 (아무리 날짜가 가까워도 이만큼은 벌림)
+  const MAX_GAP = 220;  // 이벤트 간 최대 간격 (아무리 날짜가 멀어도 이 이상은 안 벌림)
+  const FEEL_FACTOR = 18; // 클수록 "간격 차이"가 더 크게 느껴짐
 
-  let positions;
-  if (totalDays <= 0) {
-    positions = events.map((_, i) => PADDING + i * MIN_SPACING);
-  } else {
-    let minGapDays = Infinity;
-    for (let i = 1; i < times.length; i++) {
-      const diff = (times[i] - times[i - 1]) / 86400000;
-      if (diff > 0) minGapDays = Math.min(minGapDays, diff);
-    }
-    if (!isFinite(minGapDays)) minGapDays = totalDays;
-    const scale = MIN_SPACING / minGapDays;
-    positions = times.map(t => PADDING + ((t - minT) / 86400000) * scale);
+  if (events.length === 1) {
+    return { positions: [PADDING], height: PADDING * 2 };
   }
+
+  const times = events.map(e => new Date(e.d).getTime());
+  const positions = [PADDING];
+
+  for (let i = 1; i < times.length; i++) {
+    const gapDays = Math.max(0, (times[i] - times[i - 1]) / 86400000);
+    const weight = Math.log(1 + gapDays); // 날짜 차이를 완만하게 압축 (정확한 비례 X)
+    const px = Math.min(MIN_GAP + weight * FEEL_FACTOR, MAX_GAP);
+    positions.push(positions[positions.length - 1] + px);
+  }
+
   const height = positions[positions.length - 1] + PADDING;
   return { positions, height };
 }
