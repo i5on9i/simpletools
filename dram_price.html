@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DRAM 가격 추이 - 편집용</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;600;700&display=swap');
+*{box-sizing:border-box}
+body{margin:0;background:#0a0a0f;color:#e4e4e7;font-family:'Inter',sans-serif;}
+.mono{font-family:'JetBrains Mono',monospace}
+.header{position:sticky;top:0;z-index:20;backdrop-filter:blur(20px);background:rgba(10,10,15,.9);border-bottom:1px solid rgba(255,255,255,.06);padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+.card{background:#14141d;border:1px solid rgba(255,255,255,.07);border-radius:16px}
+.edit-box{background:#1a1a27;border:1px dashed rgba(255,255,255,.18);border-radius:12px;padding:16px;margin:20px auto;max-width:1100px}
+code{color:#f472b6;background:rgba(244,114,182,.1);padding:1px 5px;border-radius:4px;font-size:12px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 14px;text-align:left}
+th{color:#71717a;font-size:10px;letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.02);border-bottom:1px solid rgba(255,255,255,.06)}
+td{font-size:12.5px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(255,255,255,.02)}
+canvas{display:block;width:100%;height:100%}
+.legend-dot{display:inline-block;width:8px;height:8px;border-radius:999px;margin-right:6px}
+</style>
+</head>
+<body>
+<script>
+// ============================================================
+// === 데이터 편집 영역 - 여기만 수정하세요 (메모장으로 열면 1페이지에 보임) ===
+// ============================================================
+const DRAM_DATA = [
+  {date: '2026-09-09', ddr4_16: 91.00, ddr5_16: 54.50, ddr4_8: 45.321},
+  {date: '2026-09-10', ddr4_16: 90.50, ddr5_16: 54.50, ddr4_8: 45.279},
+  {date: '2026-09-11', ddr4_16: 89.75, ddr5_16: 54.333, ddr4_8: 45.214},
+  {date: '2026-09-14', ddr4_16: 89.25, ddr5_16: 54.333, ddr4_8: 45.214},
+  {date: '2026-09-16', ddr4_16: 87.625, ddr5_16: 54.833, ddr4_8: 45.786},
+  {date: '2026-09-17', ddr4_16: 86.25, ddr5_16: 55.00, ddr4_8: 46.143},
+  {date: '2026-09-18', ddr4_16: 85.75, ddr5_16: 56.00, ddr4_8: 46.036},
+  {date: '2026-09-21', ddr4_16: 85.00, ddr5_16: 56.933, ddr4_8: 46.036},
+  {date: '2026-09-22', ddr4_16: 84.50, ddr5_16: 57.167, ddr4_8: 46.036},
+  {date: '2026-09-23', ddr4_16: 84.375, ddr5_16: 57.50, ddr4_8: 45.893},
+  {date: '2026-09-24', ddr4_16: 83.784, ddr5_16: 57.667, ddr4_8: 46.107},
+  {date: '2026-09-29', ddr4_16: 83.66, ddr5_16: 57.833, ddr4_8: 46.321},
+  {date: '2026-09-30', ddr4_16: 83.5, ddr5_16: 58.0, ddr4_8: 46.5},
+];
+// 예시 추가: {date: '2026-09-30', ddr4_16: 83.5, ddr5_16: 58.0, ddr4_8: 46.5},
+// ============================================================
+// === 여기까지만 수정 ===
+</script>
+
+<div class="header">
+  <div><b class="mono" style="font-size:14px;">DRAM SPOT</b> <span style="color:#71717a;font-size:11px;margin-left:8px;">TrendForce DRAMeXchange • 단일파일 • 외부 라이브러리 없음</span></div>
+  <div class="mono" style="font-size:10px;color:#52525b;">DRAM_DATA 배열에서만 읽음</div>
+</div>
+
+<div class="edit-box">
+  <div style="font-size:13px;font-weight:700;margin-bottom:6px;">📝 편집 방법</div>
+  <div style="font-size:12px;color:#a1a1aa;line-height:1.7;">
+    메모장으로 이 파일을 열면 맨 위 10줄 안에 <code>DRAM_DATA</code>가 보입니다.<br>
+    마지막 데이터 뒤에 콤마 찍고 추가: <code>{date: '2026-10-01', ddr4_16: 84.0, ddr5_16: 58.0, ddr4_8: 46.5},</code> → 저장 → 브라우저 새로고침
+  </div>
+</div>
+
+<div style="max-width:1120px;margin:0 auto;padding:0 20px 40px;">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;">
+    <div class="card" style="padding:14px 16px;">
+      <div style="font-size:10px;color:#71717a;letter-spacing:.1em;text-transform:uppercase;">DDR4 16Gb 최신</div>
+      <div id="s-ddr4-16" class="mono" style="font-size:22px;font-weight:600;margin-top:4px;"></div>
+      <div id="c-ddr4-16" class="mono" style="font-size:11px;margin-top:4px;"></div>
+    </div>
+    <div class="card" style="padding:14px 16px;">
+      <div style="font-size:10px;color:#71717a;letter-spacing:.1em;text-transform:uppercase;">DDR5 16Gb 최신</div>
+      <div id="s-ddr5-16" class="mono" style="font-size:22px;font-weight:600;margin-top:4px;"></div>
+      <div id="c-ddr5-16" class="mono" style="font-size:11px;margin-top:4px;"></div>
+    </div>
+    <div class="card" style="padding:14px 16px;">
+      <div style="font-size:10px;color:#71717a;letter-spacing:.1em;text-transform:uppercase;">DDR4 8Gb 최신</div>
+      <div id="s-ddr4-8" class="mono" style="font-size:22px;font-weight:600;margin-top:4px;"></div>
+      <div id="c-ddr4-8" class="mono" style="font-size:11px;margin-top:4px;"></div>
+    </div>
+    <div class="card" style="padding:14px 16px;background:linear-gradient(135deg,#1a1a2a,#14141d);">
+      <div style="font-size:10px;color:#71717a;letter-spacing:.1em;text-transform:uppercase;">DDR4 프리미엄 vs DDR5</div>
+      <div id="s-prem" class="mono" style="font-size:28px;font-weight:700;margin-top:4px;"></div>
+      <div style="margin-top:10px;height:6px;background:rgba(255,255,255,.1);border-radius:999px;display:flex;overflow:hidden;">
+        <div id="b-ddr4" style="background:#ef4444;height:100%"></div>
+        <div id="b-ddr5" style="background:#3b82f6;height:100%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#a1a1aa;margin-top:6px;" class="mono"><span id="bl-ddr4"></span><span id="bl-ddr5"></span></div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:14px 16px;margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:13px;font-weight:600;">가격 추이 <span style="font-weight:400;color:#71717a;font-size:11px;margin-left:8px;">단위 USD</span></div>
+      <div style="display:flex;gap:12px;font-size:11px;" class="mono">
+        <span><span class="legend-dot" style="background:#ef4444"></span>DDR4 16Gb</span>
+        <span><span class="legend-dot" style="background:#3b82f6"></span>DDR5 16Gb</span>
+        <span><span class="legend-dot" style="background:#22c55e"></span>DDR4 8Gb</span>
+        <span id="daycnt" style="background:rgba(255,255,255,.06);padding:2px 8px;border-radius:999px;color:#71717a;"></span>
+      </div>
+    </div>
+    <div style="width:100%;height:360px;position:relative;"><canvas id="chart"></canvas></div>
+  </div>
+
+  <div class="card" style="overflow:hidden;">
+    <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;">
+      <b style="font-size:13px;">전체 데이터 (최신순)</b>
+      <span class="mono" style="font-size:10px;color:#52525b;">중복 날짜 넣지 마세요 • 마지막 콤마 유지</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table><thead><tr><th>Date</th><th>DDR4 16Gb</th><th>DDR5 16Gb</th><th>DDR4 8Gb</th><th>전일비 DDR4</th></tr></thead><tbody id="tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:16px;font-size:10px;color:#52525b;" class="mono">단일 HTML • 외부 CDN 없음 • 저장 후 새로고침</div>
+</div>
+
+<script>
+// ===== 렌더 로직 (외부 라이브러리 없음) =====
+(function(){
+  const asc = [...DRAM_DATA].sort((a,b)=>a.date.localeCompare(b.date));
+  const desc = [...DRAM_DATA].sort((a,b)=>b.date.localeCompare(a.date));
+  const latest = asc[asc.length-1];
+  const first = asc[0];
+  const fmt = v => '$'+v.toFixed(3);
+  const pct = (c,p)=> (c-p)/p*100;
+
+  document.getElementById('s-ddr4-16').textContent = fmt(latest.ddr4_16);
+  document.getElementById('s-ddr5-16').textContent = fmt(latest.ddr5_16);
+  document.getElementById('s-ddr4-8').textContent = fmt(latest.ddr4_8);
+  function setChange(id,curr,prev){
+    const v=pct(curr,prev);
+    const el=document.getElementById(id);
+    el.textContent=(v>0?'+':'')+v.toFixed(2)+'% 시작대비';
+    el.style.color=v<0?'#f87171':'#4ade80';
+  }
+  setChange('c-ddr4-16', latest.ddr4_16, first.ddr4_16);
+  setChange('c-ddr5-16', latest.ddr5_16, first.ddr5_16);
+  setChange('c-ddr4-8', latest.ddr4_8, first.ddr4_8);
+
+  const prem = (latest.ddr4_16-latest.ddr5_16)/latest.ddr5_16*100;
+  document.getElementById('s-prem').textContent = prem.toFixed(1)+'%';
+  document.getElementById('b-ddr4').style.width = (latest.ddr4_16/(latest.ddr4_16+latest.ddr5_16)*100)+'%';
+  document.getElementById('b-ddr5').style.width = (latest.ddr5_16/(latest.ddr4_16+latest.ddr5_16)*100)+'%';
+  document.getElementById('bl-ddr4').textContent = fmt(latest.ddr4_16);
+  document.getElementById('bl-ddr5').textContent = fmt(latest.ddr5_16);
+  document.getElementById('daycnt').textContent = asc.length+'일';
+
+  // table
+  const tbody=document.getElementById('tbody');
+  desc.forEach(r=>{
+    const idx=asc.findIndex(x=>x.date===r.date);
+    const prev=idx>0?asc[idx-1]:null;
+    const diff=prev?r.ddr4_16-prev.ddr4_16:0;
+    const diffHtml=prev?`<span class="mono" style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid ${diff<0?'rgba(248,113,113,.2)':'rgba(74,222,128,.2)'};background:${diff<0?'rgba(248,113,113,.1)':'rgba(74,222,128,.1)'};color:${diff<0?'#fca5a5':'#86efac'}">${diff>0?'+':''}${diff.toFixed(3)}</span>`:`<span class="mono" style="color:#52525b">—</span>`;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="mono" style="color:#d4d4d8">${r.date}</td><td class="mono" style="color:white;font-weight:500">${fmt(r.ddr4_16)}</td><td class="mono">${fmt(r.ddr5_16)}</td><td class="mono">${fmt(r.ddr4_8)}</td><td>${diffHtml}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // pure canvas chart
+  const canvas=document.getElementById('chart');
+  const dpr=window.devicePixelRatio||1;
+  function resize(){
+    const rect=canvas.parentElement.getBoundingClientRect();
+    canvas.width=rect.width*dpr;
+    canvas.height=rect.height*dpr;
+    canvas.style.width=rect.width+'px';
+    canvas.style.height=rect.height+'px';
+    draw();
+  }
+  function draw(){
+    const ctx=canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const W=canvas.width/dpr, H=canvas.height/dpr;
+    ctx.clearRect(0,0,W,H);
+    const pad={l:50,r:16,t:10,b:28};
+    const plotW=W-pad.l-pad.r, plotH=H-pad.t-pad.b;
+    const allVals=asc.flatMap(d=>[d.ddr4_16,d.ddr5_16,d.ddr4_8]);
+    let min=Math.min(...allVals), max=Math.max(...allVals);
+    const padV=(max-min)*0.1; min-=padV; max+=padV;
+    const xScale=i=>pad.l + (i/(asc.length-1||1))*plotW;
+    const yScale=v=>pad.t + (1-(v-min)/(max-min||1))*plotH;
+
+    // grid
+    ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){
+      const y=pad.t + (i/4)*plotH;
+      ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+      const val=max - (i/4)*(max-min);
+      ctx.fillStyle='#71717a'; ctx.font='10px JetBrains Mono'; ctx.textAlign='right'; ctx.fillText('$'+val.toFixed(0), pad.l-8, y+3);
+    }
+    // x labels
+    ctx.fillStyle='#71717a'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    asc.forEach((d,i)=>{
+      if(asc.length>10 && i%Math.ceil(asc.length/8)!==0 && i!==asc.length-1) return;
+      ctx.fillText(d.date.slice(5), xScale(i), H-6);
+    });
+
+    function line(key,color){
+      ctx.strokeStyle=color; ctx.lineWidth=2.2; ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.beginPath();
+      asc.forEach((d,i)=>{
+        const x=xScale(i), y=yScale(d[key]);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+      // points
+      ctx.fillStyle=color;
+      asc.forEach((d,i)=>{
+        ctx.beginPath(); ctx.arc(xScale(i), yScale(d[key]), 3, 0, Math.PI*2); ctx.fill();
+      });
+    }
+    line('ddr4_8','#22c55e');
+    line('ddr5_16','#3b82f6');
+    line('ddr4_16','#ef4444');
+  }
+  window.addEventListener('resize', resize);
+  resize();
+})();
+</script>
+</body>
+</html>
